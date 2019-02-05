@@ -193,10 +193,14 @@ class Piano {
       li.addEventListener('touchend', noteStopHandler);
     });
   }
+  onNoteActiveToggle(target, state) {
+    target.classList.toggle('active', !!state);
+  }
   onNoteStart(ev) {
     const {target} = ev;
     const {dataset} = target;
     this.activeNotes.set(dataset.note, true);
+    this.onNoteActiveToggle(target, true);
 
     this.ac_.resume().then(() => {
       this.notesPlayer_.play(dataset.note);
@@ -211,6 +215,7 @@ class Piano {
 
     if (!this.activeNotes.get(dataset.note)) return;
     this.activeNotes.set(dataset.note, false);
+    this.onNoteActiveToggle(target, false);
 
     this.notesPlayer_.stop(dataset.note);
   }
