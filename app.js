@@ -126,24 +126,31 @@ class Mp3NotePlayer extends NotesPlayer {
     super();
     this.ac_ = ac;
     this.buffer_ = null;
+    this.activeNoteSource_ = new Map();
     this.getMp3Buffer_();
   }
   play(note) {
-    this.source = this.ac_.createBufferSource();
-    this.source.buffer = this.buffer_;
+    if (this.activeNoteSource_.get(note)) return;
+
+    const source = this.ac_.createBufferSource();
+    source.buffer = this.buffer_;
 
     // Change playback rate to get different "notes"
     const playbackRate = KeyFrequencyMap[note]/KeyFrequencyMap['C4'];
-    this.source.playbackRate.value = playbackRate;
+    source.playbackRate.value = playbackRate;
 
-    this.source.connect(this.ac_.destination);
-    this.source.loop = true;
-    this.source.loopStart = .5;
-    this.source.loopEnd = .6;
-    this.source.start(.5);
+    source.connect(this.ac_.destination);
+    source.loop = true;
+    source.loopStart = .5;
+    source.loopEnd = .6;
+    source.start(.5);
+    this.activeNoteSource_.set(note, source);
   }
-  stop() {
-    this.source.stop(0);
+  stop(note) {
+    const source = this.activeNoteSource_.get(note);
+    if (source) source.stop(0);
+
+    this.activeNoteSource_.delete(note);
   }
   getMp3Buffer_() {
     const request = new XMLHttpRequest();
@@ -168,33 +175,44 @@ class Piano {
   constructor(element, ac, notesPlayer) {
     this.ac_ = ac;
     this.notesPlayer_ = notesPlayer;
-    this.eventListenerMap = new Map();
+    this.activeNotes = new Map();
     this.element_ = element;
 
     this.bindEventHandlers();
   }
   bindEventHandlers() {
-    this.element_.addEventListener('mousedown', (ev) => this.onNoteStart(ev));
-    this.element_.addEventListener('touchstart', (ev) => this.onNoteStart(ev));
+    this.element_.querySelectorAll('li').forEach((li) => {
+      const noteStopHandler = this.onNoteStop.bind(this);
+
+      li.addEventListener('mousedown', (ev) => this.onNoteStart(ev));
+      li.addEventListener('touchstart', (ev) => this.onNoteStartTouch(ev));
+
+      li.addEventListener('mouseup', noteStopHandler);
+      li.addEventListener('mouseleave', noteStopHandler);
+      li.addEventListener('touchcancel', noteStopHandler);
+      li.addEventListener('touchend', noteStopHandler);
+    });
   }
-  onNoteStart({target}) {
+  onNoteStart(ev) {
+    const {target} = ev;
     const {dataset} = target;
+    this.activeNotes.set(dataset.note, true);
+
     this.ac_.resume().then(() => {
       this.notesPlayer_.play(dataset.note);
-
-      const noteStopHandler = this.onNoteStop.bind(this);
-      this.eventListenerMap.set(target, noteStopHandler);
-      target.addEventListener('mouseup', noteStopHandler);
-      target.addEventListener('mouseleave', noteStopHandler);
     });
+  }
+  onNoteStartTouch(ev) {
+    ev.preventDefault();
+    this.onNoteStart(ev);
   }
   onNoteStop({target}) {
     const {dataset} = target;
-    this.notesPlayer_.stop();
-    const noteStopHandler = this.eventListenerMap.get(target);
 
-    target.removeEventListener('mouseup', noteStopHandler);
-    target.removeEventListener('mouseleave', noteStopHandler);
+    if (!this.activeNotes.get(dataset.note)) return;
+    this.activeNotes.set(dataset.note, false);
+
+    this.notesPlayer_.stop(dataset.note);
   }
 }
 
