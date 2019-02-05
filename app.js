@@ -126,31 +126,9 @@ class Mp3NotePlayer extends NotesPlayer {
     super();
     this.ac_ = ac;
     this.buffer_ = null;
-    this.activeNoteSource_ = new Map();
+    this.activeGainNodes_ = new Map();
+
     this.getMp3Buffer_();
-  }
-  play(note) {
-    if (this.activeNoteSource_.get(note)) return;
-
-    const source = this.ac_.createBufferSource();
-    source.buffer = this.buffer_;
-
-    // Change playback rate to get different "notes"
-    const playbackRate = KeyFrequencyMap[note]/KeyFrequencyMap['C4'];
-    source.playbackRate.value = playbackRate;
-
-    source.connect(this.ac_.destination);
-    source.loop = true;
-    source.loopStart = .5;
-    source.loopEnd = .6;
-    source.start(.5);
-    this.activeNoteSource_.set(note, source);
-  }
-  stop(note) {
-    const source = this.activeNoteSource_.get(note);
-    if (source) source.stop(0);
-
-    this.activeNoteSource_.delete(note);
   }
   getMp3Buffer_() {
     const request = new XMLHttpRequest();
@@ -160,13 +138,47 @@ class Mp3NotePlayer extends NotesPlayer {
 
     request.onload = () => {
       const audioData = request.response;
-
       this.ac_.decodeAudioData(audioData,
           (buffer) =>  (this.buffer_ = buffer),
           (e) => console.log("Error with decoding audio data" + e.error))
     };
 
     request.send();
+  }
+  play(note) {
+    if (this.activeGainNodes_.get(note)) {
+      const gainNode = this.activeGainNodes_.get(note);
+      gainNode.gain.setValueAtTime(1, this.ac_.currentTime);
+      return;
+    }
+    const gainNode = this.ac_.createGain();
+    gainNode.gain.setValueAtTime(1, this.ac_.currentTime);
+
+    const source = this.ac_.createBufferSource();
+    source.connect(gainNode);
+    source.buffer = this.buffer_;
+
+    // Change playback rate to get different "notes"
+    const playbackRate = KeyFrequencyMap[note]/KeyFrequencyMap['C4'];
+    source.playbackRate.value = playbackRate;
+
+    const start = .5;
+    const end = start + .05;
+
+    source.loop = true;
+    source.loopStart = start;
+    source.loopEnd = end;
+    source.start(0);
+
+
+    gainNode.connect(this.ac_.destination);
+    this.activeGainNodes_.set(note, gainNode);
+  }
+  stop(note) {
+    const gainNode = this.activeGainNodes_.get(note);
+    if (gainNode) {
+      gainNode.gain.exponentialRampToValueAtTime(0.01, this.ac_.currentTime + .2);
+    }
   }
 }
 
