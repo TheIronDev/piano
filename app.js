@@ -148,8 +148,8 @@ class Mp3NotePlayer extends NotesPlayer {
   play(note) {
     if (this.activeGainNodes_.get(note)) {
       const gainNode = this.activeGainNodes_.get(note);
-      gainNode.gain.setValueAtTime(1, this.ac_.currentTime);
-      return;
+      gainNode.gain.setValueAtTime(0, this.ac_.currentTime);
+      gainNode.disconnect();
     }
     const gainNode = this.ac_.createGain();
     gainNode.gain.setValueAtTime(1, this.ac_.currentTime);
@@ -162,14 +162,7 @@ class Mp3NotePlayer extends NotesPlayer {
     const playbackRate = KeyFrequencyMap[note]/KeyFrequencyMap['C4'];
     source.playbackRate.value = playbackRate;
 
-    const start = .5;
-    const end = start + .05;
-
-    source.loop = true;
-    source.loopStart = start;
-    source.loopEnd = end;
     source.start(0);
-
 
     gainNode.connect(this.ac_.destination);
     this.activeGainNodes_.set(note, gainNode);
@@ -177,7 +170,11 @@ class Mp3NotePlayer extends NotesPlayer {
   stop(note) {
     const gainNode = this.activeGainNodes_.get(note);
     if (gainNode) {
-      gainNode.gain.exponentialRampToValueAtTime(0.01, this.ac_.currentTime + .2);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, this.ac_.currentTime + .4);
+      setTimeout(() => {
+        gainNode.gain.setValueAtTime(0, 0);
+        gainNode.disconnect();
+      }, 400);
     }
   }
 }

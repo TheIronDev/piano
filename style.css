@@ -13,8 +13,14 @@
 .active {background: #fafafa;}
 .sharp.active {background: #333;}
 
-@media (max-width: 800px) {
-    .note {display: none}
-    .note[data-octave="4"],
-    .note[data-octave="5"] {display: block}
-}
+/* Low octaves */
+.note[data-octave="0"],
+.note[data-octave="1"],
+.note[data-octave="2"],
+.note[data-octave="3"] {display: none;}
+
+/* Higher octaves */
+.note[data-octave="6"],
+.note[data-octave="7"],
+.note[data-octave="8"] {display: none;}
+
