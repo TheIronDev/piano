@@ -100,26 +100,6 @@ class NotesPlayer {
   }
   stop() {}
 }
-class OscillatorNotePlayer extends NotesPlayer {
-  constructor(ac) {
-    super();
-    this.ac_ = ac;
-    this.oscillator;
-  }
-  play(note) {
-    super.play(note);
-    const frequency = KeyFrequencyMap[note] || KeyFrequencyMap['C4'];
-    this.oscillator = this.ac_.createOscillator();
-
-    this.oscillator.type = 'sine';
-    this.oscillator.frequency.setValueAtTime(frequency, this.ac_.currentTime); // value in hertz
-    this.oscillator.connect(this.ac_.destination);
-    this.oscillator.start();
-  }
-  stop(note) {
-    this.oscillator.stop();
-  }
-}
 
 class Mp3NotePlayer extends NotesPlayer {
   constructor(ac) {
@@ -189,6 +169,11 @@ class Piano {
 
     this.bindEventHandlers();
   }
+  getNote(target) {
+    const {dataset} = target;
+    const {note, octave} = dataset;
+    return `${note}${octave}`;
+  }
   bindEventHandlers() {
     this.element_.querySelectorAll('li').forEach((li) => {
       const noteStopHandler = this.onNoteStop.bind(this);
@@ -207,12 +192,12 @@ class Piano {
   }
   onNoteStart(ev) {
     const {target} = ev;
-    const {dataset} = target;
-    this.activeNotes.set(dataset.note, true);
+    const note = this.getNote(target);
+    this.activeNotes.set(note, true);
     this.onNoteActiveToggle(target, true);
 
     this.ac_.resume().then(() => {
-      this.notesPlayer_.play(dataset.note);
+      this.notesPlayer_.play(note);
     });
   }
   onNoteStartTouch(ev) {
@@ -220,13 +205,13 @@ class Piano {
     this.onNoteStart(ev);
   }
   onNoteStop({target}) {
-    const {dataset} = target;
+    const note = this.getNote(target);
 
-    if (!this.activeNotes.get(dataset.note)) return;
-    this.activeNotes.set(dataset.note, false);
+    if (!this.activeNotes.get(note)) return;
+    this.activeNotes.set(note, false);
     this.onNoteActiveToggle(target, false);
 
-    this.notesPlayer_.stop(dataset.note);
+    this.notesPlayer_.stop(note);
   }
 }
 

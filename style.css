@@ -2,16 +2,23 @@
 .piano {height: 100%;list-style: none;margin: 0; padding: 0;position: fixed; bottom: 0;}
 .note {background: #fff;border: 1px solid #ccc; display: block; float: left; height: 100%;width: 100px;}
 .sharp {
-    background: #000;
-    width: 50px;
-    position: relative;
-    height: 50%;
-    margin-left: -25px;
-    margin-right: -25px;
+  background: #000;
+  width: 50px;
+  position: relative;
+  height: 50%;
+  margin-left: -25px;
+  margin-right: -25px;
 }
 
-.active {background: #fafafa;}
-.sharp.active {background: #333;}
+
+@keyframes activeNote {
+  0% {background-color: #f00;}
+  33% {background-color: #0f0;}
+  66% {background-color: #00f;}
+  100% {background-color: #f00;}
+}
+
+.active {animation: activeNote 5s infinite;}
 
 /* Low octaves */
 .note[data-octave="0"],
