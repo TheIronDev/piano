@@ -91,6 +91,22 @@ const KeyFrequencyMap = {
 };
 
 
+const NoteKeyMap = {
+  a: 'C',
+  w: 'C#',
+  s: 'D',
+  e: 'D#',
+  d: 'E',
+  f: 'F',
+  t: 'F#',
+  g: 'G',
+  y: 'G#',
+  h: 'A',
+  u: 'A#',
+  j: 'B',
+};
+
+
 class NotesPlayer {
   constructor() {
     this.notes = new Map();
@@ -161,18 +177,26 @@ class Mp3NotePlayer extends NotesPlayer {
 
 // Handles which piano key was pressed, calling appropriate start/stop fns
 class Piano {
-  constructor(element, ac, notesPlayer) {
+  constructor(window, element, ac, notesPlayer) {
+    this.window_ = window;
     this.ac_ = ac;
     this.notesPlayer_ = notesPlayer;
     this.activeNotes = new Map();
     this.element_ = element;
 
+    this.keyPressedNotes_ = new Map();
+    this.octave_ = 4;
     this.bindEventHandlers();
   }
-  getNote(target) {
+  getNote(ev) {
+    if (ev.key) return this.getNoteFromKey(ev.key);
+    const {target} = ev;
     const {dataset} = target;
     const {note, octave} = dataset;
     return `${note}${octave}`;
+  }
+  getNoteFromKey(key) {
+    return NoteKeyMap[key] ? `${NoteKeyMap[key]}${this.octave_}` : null;
   }
   bindEventHandlers() {
     this.element_.querySelectorAll('li').forEach((li) => {
@@ -186,38 +210,67 @@ class Piano {
       li.addEventListener('touchcancel', noteStopHandler);
       li.addEventListener('touchend', noteStopHandler);
     });
+
+    this.window_.addEventListener('keydown', (ev) =>  this.onNoteStartKeyDown(ev), true);
+    this.window_.addEventListener('keyup', (ev) => this.onNoteStopKeyDown(ev), true);
   }
-  onNoteActiveToggle(target, state) {
-    target.classList.toggle('active', !!state);
+  onNoteActiveToggle(noteString, state) {
+    if (!noteString) return;
+    const note = noteString.replace(/\d/g, '');
+    const octave = noteString.replace(/\D/g, '');
+
+    const element =this.element_.querySelector(`[data-note="${note}"][data-octave="${octave}"]`);
+    element && element.classList.toggle('active', !!state);
   }
   onNoteStart(ev) {
-    const {target} = ev;
-    const note = this.getNote(target);
+    const note = this.getNote(ev);
+    if (!note) return;
     this.activeNotes.set(note, true);
-    this.onNoteActiveToggle(target, true);
+    this.onNoteActiveToggle(note, true);
 
     this.ac_.resume().then(() => {
       this.notesPlayer_.play(note);
     });
   }
+  onNoteStartKeyDown(ev) {
+    if (Number.isInteger(Number(ev.key))) {
+      this.setKeyboardOctave(Number(ev.key));
+      return;
+    }
+    if (this.keyPressedNotes_.has(ev.key)) return;
+    this.keyPressedNotes_.set(ev.key, true);
+    this.onNoteStart(ev);
+  }
   onNoteStartTouch(ev) {
     ev.preventDefault();
     this.onNoteStart(ev);
   }
-  onNoteStop({target}) {
-    const note = this.getNote(target);
+  onNoteStop(ev) {
+    const note = this.getNote(ev);
+    if (!note) return;
 
     if (!this.activeNotes.get(note)) return;
     this.activeNotes.set(note, false);
-    this.onNoteActiveToggle(target, false);
+    this.onNoteActiveToggle(note, false);
 
     this.notesPlayer_.stop(note);
+  }
+  onNoteStopKeyDown(ev) {
+    if (Number.isInteger(Number(ev.key))) {
+      this.setKeyboardOctave(Number(ev.key));
+      return;
+    }
+    this.keyPressedNotes_.delete(ev.key);
+    this.onNoteStop(ev);
+  }
+  setKeyboardOctave(octave) {
+    this.octave_ = octave;
   }
 }
 
 class App {
-  constructor(pianoElement, ac, notesPlayer) {
-    this.piano_ = new Piano(pianoElement, ac, notesPlayer);
+  constructor(window, pianoElement, ac, notesPlayer) {
+    this.piano_ = new Piano(window, pianoElement, ac, notesPlayer);
   }
 }
 
@@ -227,5 +280,5 @@ window.onload = () => {
 
   //const notesPlayer = new OscillatorNotePlayer(ac);
   const notesPlayer = new Mp3NotePlayer(ac);
-  const app = new App(pianoElement, ac, notesPlayer);
+  const app = new App(window, pianoElement, ac, notesPlayer);
 };
