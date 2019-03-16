@@ -1,0 +1,22 @@
+{
+  "short_name": "Piano",
+  "name": "Piano",
+  "icons": [
+    {
+      "src": "/piano/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/piano/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/piano/?source=pwa",
+  "background_color": "#FFFFFF",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "scope": "/piano/",
+  "theme_color": "#000000"
+}
