@@ -21,7 +21,6 @@
 .active {animation: activeNote 5s infinite;}
 
 /* Low octaves */
-.note[data-octave="0"],
 .note[data-octave="1"],
 .note[data-octave="2"],
 .note[data-octave="3"] {display: none;}

@@ -1,95 +1,33 @@
-// https://en.wikipedia.org/wiki/Piano_key_frequencies
-const KeyFrequencyMap = {
-  ['A0']: 27.5,
-  ['A#0']: 29.13524,
-  ['B0']: 30.86771,
-  ['C1']: 32.7032,
-  ['C#1']: 34.64783,
-  ['D1']: 36.7081,
-  ['D#1']: 38.89087,
-  ['E1']: 41.20344,
-  ['F1']: 43.65353,
-  ['F#1']: 46.2493,
-  ['G1']: 48.99943,
-  ['G#1']: 51.91309,
-  ['A1']: 55,
-  ['A#1']: 58.27047,
-  ['B1']: 61.73541,
-  ['C2']: 65.40639,
-  ['C#2']: 69.29566,
-  ['D2']: 73.41619,
-  ['D#1']: 77.78175,
-  ['E2']: 82.40689,
-  ['F2']: 87.30706,
-  ['F#2']: 92.49861,
-  ['G2']: 97.99886,
-  ['G#2']: 103.8262,
-  ['A2']: 110.0,
-  ['A#2']: 116.5409,
-  ['B2']: 123.4708,
-  ['C3']: 130.8128,
-  ['C#3']: 138.5913,
-  ['D3']: 146.8324,
-  ['D#3']: 155.5635,
-  ['E3']: 164.8138,
-  ['F3']: 174.6141,
-  ['F#3']: 184.9972,
-  ['G3']: 195.9977,
-  ['G#3']: 207.6523,
-  ['A3']: 220.0,
-  ['A#3']: 233.0819,
-  ['B3']: 246.9417,
-  ['C4']: 261.6256,
-  ['C#4']: 277.1826,
-  ['D4']: 293.6648,
-  ['D#4']: 311.127,
-  ['E4']: 329.6276,
-  ['F4']: 349.2282,
-  ['F#4']: 369.9944,
-  ['G4']: 391.9954,
-  ['G#4']: 415.3047,
-  ['A4']: 440,
-  ['A#4']: 466.1638,
-  ['B4']: 493.8833,
-  ['C5']: 523.2511,
-  ['C#5']: 554.3653,
-  ['D5']: 587.3295,
-  ['D#5']: 622.254,
-  ['E5']: 659.2551,
-  ['F5']: 698.4565,
-  ['F#5']: 739.9888,
-  ['G5']: 783.9909,
-  ['G#5']: 830.6094,
-  ['A5']: 880,
-  ['A#5']: 932.3275,
-  ['B5']: 987.7666,
-  ['C6']: 1046.502,
-  ['C#6']: 1108.731,
-  ['D6']: 1174.659,
-  ['D#6']: 1244.508,
-  ['E6']: 1318.51,
-  ['F6']: 1396.913,
-  ['F#6']: 1479.978,
-  ['G6']: 1567.982,
-  ['G#6']: 1661.219,
-  ['A6']: 1760,
-  ['A#6']: 1864.655,
-  ['B6']: 1975.533,
-  ['C7']: 2093.005,
-  ['C#7']: 2217.461,
-  ['D7']: 2349.318,
-  ['D#7']: 2489.016,
-  ['E7']: 2637.02,
-  ['F7']: 2793.826,
-  ['F#7']: 2959.955,
-  ['G7']: 3135.963,
-  ['G#7']: 3322.438,
-  ['A7']: 3520,
-  ['A#7']: 3729.31,
-  ['B7']: 3951.066,
-  ['C8']: 4186.009
+const BaseNoteFrequencies = {
+  ['C']: 32.7032,
+  ['C#']: 34.64783,
+  ['D']: 36.7081,
+  ['D#']: 38.89087,
+  ['E']: 41.20344,
+  ['F']: 43.65353,
+  ['F#']: 46.2493,
+  ['G']: 48.99943,
+  ['G#']: 51.91309,
+  ['A']: 55,
+  ['A#']: 58.27047,
+  ['B']: 61.73541,
 };
 
+/**
+ * Generates a map of notes (with octaves) to their frequencies.
+ * This can all be generated using base notes.
+ * See https://en.wikipedia.org/wiki/Piano_key_frequencies for more info.
+ * @type {!Object<string, number>}
+ */
+const KeyFrequencyMap = Object
+    .entries(BaseNoteFrequencies)
+    .reduce((memo, [baseNote, baseFrequency]) => {
+      for (let octave = 1; octave < 8; octave ++) {
+        const frequency = baseFrequency * (2 ** (octave - 1));
+        memo[`${baseNote}${octave}`] = frequency;
+      }
+      return memo;
+    }, {});
 
 const NoteKeyMap = {
   a: 'C',
@@ -106,20 +44,9 @@ const NoteKeyMap = {
   j: 'B',
 };
 
-
-class NotesPlayer {
-  constructor() {
-    this.notes = new Map();
-  }
-  play(noteName, note) {
-    this.notes.set(noteName, note);
-  }
-  stop() {}
-}
-
-class Mp3NotePlayer extends NotesPlayer {
+// Plays the audio
+class NotePlayer {
   constructor(ac) {
-    super();
     this.ac_ = ac;
     this.buffer_ = null;
     this.activeGainNodes_ = new Map();
@@ -129,7 +56,7 @@ class Mp3NotePlayer extends NotesPlayer {
   getMp3Buffer_() {
     const request = new XMLHttpRequest();
 
-    request.open('GET', './cNote.mp3', true);
+    request.open('GET', './C4.mp3', true);
     request.responseType = 'arraybuffer';
 
     request.onload = () => {
@@ -200,17 +127,17 @@ class Piano {
   }
   bindEventHandlers() {
     this.element_.querySelectorAll('li').forEach((li) => {
-      const noteStopHandler = this.onNoteStop.bind(this);
-
       li.addEventListener('mousedown', (ev) => this.onNoteStart(ev));
       li.addEventListener('touchstart', (ev) => this.onNoteStartTouch(ev));
 
+      const noteStopHandler = this.onNoteStop.bind(this);
       li.addEventListener('mouseup', noteStopHandler);
       li.addEventListener('mouseleave', noteStopHandler);
       li.addEventListener('touchcancel', noteStopHandler);
       li.addEventListener('touchend', noteStopHandler);
     });
 
+    // Bind key handlers
     this.window_.addEventListener('keydown', (ev) =>  this.onNoteStartKeyDown(ev), true);
     this.window_.addEventListener('keyup', (ev) => this.onNoteStopKeyDown(ev), true);
   }
@@ -219,7 +146,7 @@ class Piano {
     const note = noteString.replace(/\d/g, '');
     const octave = noteString.replace(/\D/g, '');
 
-    const element =this.element_.querySelector(`[data-note="${note}"][data-octave="${octave}"]`);
+    const element = this.element_.querySelector(`[data-note="${note}"][data-octave="${octave}"]`);
     element && element.classList.toggle('active', !!state);
   }
   onNoteStart(ev) {
@@ -268,17 +195,11 @@ class Piano {
   }
 }
 
-class App {
-  constructor(window, pianoElement, ac, notesPlayer) {
-    this.piano_ = new Piano(window, pianoElement, ac, notesPlayer);
-  }
-}
-
 window.onload = () => {
   const pianoElement = document.getElementById('piano');
   const ac = new (window.AudioContext || window.webkitAudioContext)();
 
   //const notesPlayer = new OscillatorNotePlayer(ac);
-  const notesPlayer = new Mp3NotePlayer(ac);
-  const app = new App(window, pianoElement, ac, notesPlayer);
+  const notesPlayer = new NotePlayer(ac);
+  const piano = new Piano(window, pianoElement, ac, notesPlayer);
 };
