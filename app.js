@@ -29,6 +29,7 @@ const KeyFrequencyMap = Object
       return memo;
     }, {});
 
+// Map keyboard keys to notes
 const NoteKeyMap = {
   a: 'C',
   w: 'C#',
@@ -44,8 +45,19 @@ const NoteKeyMap = {
   j: 'B',
 };
 
+// Map keyboard keys to notes of the next octave
+const NextOctaveNoteKeyMap = {
+  'k': 'C',
+  'o': 'C#',
+  'l': 'D',
+  'p': 'D#',
+  ';': 'E',
+  "'": 'F',
+  ']': 'F#',
+};
+
 // Plays the audio
-class NotePlayer {
+class AudioPlayer {
   constructor(ac) {
     this.ac_ = ac;
     this.buffer_ = null;
@@ -104,10 +116,10 @@ class NotePlayer {
 
 // Handles which piano key was pressed, calling appropriate start/stop fns
 class Piano {
-  constructor(window, element, ac, notesPlayer) {
+  constructor(window, element, ac, audioPlayer) {
     this.window_ = window;
     this.ac_ = ac;
-    this.notesPlayer_ = notesPlayer;
+    this.audioPlayer_ = audioPlayer;
     this.activeNotes = new Map();
     this.element_ = element;
 
@@ -123,7 +135,9 @@ class Piano {
     return `${note}${octave}`;
   }
   getNoteFromKey(key) {
-    return NoteKeyMap[key] ? `${NoteKeyMap[key]}${this.octave_}` : null;
+    if (NextOctaveNoteKeyMap[key]) return `${NextOctaveNoteKeyMap[key]}${this.octave_ + 1}`;
+    if (NoteKeyMap[key]) return `${NoteKeyMap[key]}${this.octave_}`;
+    return null;
   }
   bindEventHandlers() {
     this.element_.querySelectorAll('li').forEach((li) => {
@@ -138,7 +152,7 @@ class Piano {
     });
 
     // Bind key handlers
-    this.window_.addEventListener('keydown', (ev) =>  this.onNoteStartKeyDown(ev), true);
+    this.window_.addEventListener('keydown', (ev) => this.onNoteStartKeyDown(ev), true);
     this.window_.addEventListener('keyup', (ev) => this.onNoteStopKeyDown(ev), true);
   }
   onNoteActiveToggle(noteString, state) {
@@ -146,7 +160,8 @@ class Piano {
     const note = noteString.replace(/\d/g, '');
     const octave = noteString.replace(/\D/g, '');
 
-    const element = this.element_.querySelector(`[data-note="${note}"][data-octave="${octave}"]`);
+    const query = `[data-note="${note}"][data-octave="${octave}"]`;
+    const element = this.element_.querySelector(query);
     element && element.classList.toggle('active', !!state);
   }
   onNoteStart(ev) {
@@ -156,7 +171,7 @@ class Piano {
     this.onNoteActiveToggle(note, true);
 
     this.ac_.resume().then(() => {
-      this.notesPlayer_.play(note);
+      this.audioPlayer_.play(note);
     });
   }
   onNoteStartKeyDown(ev) {
@@ -180,7 +195,7 @@ class Piano {
     this.activeNotes.set(note, false);
     this.onNoteActiveToggle(note, false);
 
-    this.notesPlayer_.stop(note);
+    this.audioPlayer_.stop(note);
   }
   onNoteStopKeyDown(ev) {
     if (Number.isInteger(Number(ev.key))) {
@@ -199,11 +214,11 @@ window.onload = () => {
   const pianoElement = document.getElementById('piano');
   const ac = new (window.AudioContext || window.webkitAudioContext)();
 
-  //const notesPlayer = new OscillatorNotePlayer(ac);
-  const notesPlayer = new NotePlayer(ac);
-  const piano = new Piano(window, pianoElement, ac, notesPlayer);
+  const audioPlayer = new AudioPlayer(ac);
+  const piano = new Piano(window, pianoElement, ac, audioPlayer);
 };
 
+// Load up a service worker so we can have a PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/piano/sw.js').then((registration) => {
